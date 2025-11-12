@@ -11,7 +11,7 @@ resource "aws_security_group" "service_sg" {
   )
 }
 
-resource "aws_security_group_ingress_rule" "ingress" {
+resource "aws_vpc_security_group_ingress_rule" "ingress" {
   for_each          = { for rule in var.ingress_rules : rule.description => rule }
   description       = each.value.description
   security_group_id = aws_security_group.service_sg.id
@@ -21,7 +21,7 @@ resource "aws_security_group_ingress_rule" "ingress" {
   ip_protocol       = each.value.ip_protocol
 }
 
-resource "aws_security_group_egress_rule" "egress" {
+resource "aws_vpc_security_group_egress_rule" "egress" {
   security_group_id = aws_security_group.service_sg.id
   cidr_ipv4         = "0.0.0.0/0"
   ip_protocol       = "-1"
