@@ -96,11 +96,6 @@ variable "public_subnet_ids" {
   description = "Public subnet IDs for the ALB. Required when alb_enabled = true."
   type        = list(string)
   default     = []
-
-  validation {
-    condition     = !var.alb_enabled || length(var.public_subnet_ids) > 0
-    error_message = "public_subnet_ids must be provided when alb_enabled = true."
-  }
 }
 
 # ------------------------------------------------------------------------------
