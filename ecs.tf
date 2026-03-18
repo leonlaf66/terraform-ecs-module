@@ -82,12 +82,21 @@ resource "aws_ecs_service" "this" {
   propagate_tags                     = "TASK_DEFINITION"
   deployment_minimum_healthy_percent = var.deployment_minimum_healthy_percent
   deployment_maximum_percent         = var.deployment_maximum_percent
-  health_check_grace_period_seconds  = 60
+  health_check_grace_period_seconds  = var.alb_enabled && each.value.alb_config != null ? 60 : 0
 
   network_configuration {
     subnets          = var.subnet_ids
     security_groups  = [aws_security_group.service_sg.id]
     assign_public_ip = each.value.assign_public_ip
+  }
+
+  dynamic "load_balancer" {
+    for_each = var.alb_enabled && each.value.alb_config != null ? [1] : []
+    content {
+      target_group_arn = aws_lb_target_group.this[each.key].arn
+      container_name   = "${var.app_name}-${each.key}-container"
+      container_port   = each.value.alb_config.container_port
+    }
   }
 
   force_new_deployment = true

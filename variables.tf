@@ -14,7 +14,7 @@ variable "vpc_id" {
 }
 
 variable "subnet_ids" {
-  description = "A list of subnet IDs for the ECS services and EFS mount targets."
+  description = "Private subnet IDs for ECS tasks. When ALB is enabled, tasks run here and are not directly internet-accessible."
   type        = list(string)
 }
 
@@ -65,7 +65,7 @@ variable "deployment_maximum_percent" {
 }
 
 variable "ingress_rules" {
-  description = "A list of ingress rules for the security group."
+  description = "Direct ingress rules for the ECS service security group (e.g. Prometheus scrape, debug access). When ALB is enabled, ALB → service traffic is handled automatically and does not need to be listed here."
   type = list(object({
     description = string
     from_port   = number
@@ -82,12 +82,37 @@ variable "efs_enabled" {
   default     = false
 }
 
+# ------------------------------------------------------------------------------
+# ALB
+# ------------------------------------------------------------------------------
+
+variable "alb_enabled" {
+  description = "If true, creates an internet-facing Application Load Balancer. Requires public_subnet_ids."
+  type        = bool
+  default     = false
+}
+
+variable "public_subnet_ids" {
+  description = "Public subnet IDs for the ALB. Required when alb_enabled = true."
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition     = !var.alb_enabled || length(var.public_subnet_ids) > 0
+    error_message = "public_subnet_ids must be provided when alb_enabled = true."
+  }
+}
+
+# ------------------------------------------------------------------------------
+# Services
+# ------------------------------------------------------------------------------
+
 variable "services" {
   description = "A map of service configurations to deploy. The map key is the logical service name."
   type = map(object({
 
     image_tag     = string
-    
+
     cpu           = number
     memory        = number
     port_mappings = list(object({ containerPort = number, hostPort = number, protocol = string }))
@@ -106,6 +131,13 @@ variable "services" {
     efs_config = optional(object({
       path           = string
       container_path = string
+    }), null)
+
+    alb_config = optional(object({
+      container_port = number
+      health_check_path = optional(string, "/health")
+      priority = optional(number, 100)
+      path_patterns = optional(list(string), ["/*"])
     }), null)
   }))
   default = {}
